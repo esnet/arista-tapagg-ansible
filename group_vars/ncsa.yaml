@@ -1,0 +1,7 @@
+---
+ntp_servers:
+  - 141.142.2.2
+dns_servers: 
+   - 141.142.2.2
+   - 141.142.230.144
+syslog_host: syslog-sec.ncsa.illinois.edu

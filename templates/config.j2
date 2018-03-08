@@ -1,0 +1,111 @@
+{###############################}
+{# Configure the system itself #}
+{###############################}
+
+{# Hostname, DNS, NTP and syslog #}
+
+hostname {{ inventory_hostname }}
+
+{% for dns_ip in dns_servers %}
+ip name-server vrf default {{ dns_ip }}
+{% endfor %}
+
+logging trap system tag sshd
+logging trap system tag ntpd contain clock_step
+logging host {{ syslog_host }} protocol tcp
+
+{% for ntp_ip in ntp_servers %}
+ntp server {{ ntp_ip }}
+{% endfor %}
+
+clock timezone {{ timezone }}
+
+{# Configure authentication #}
+
+aaa authorization exec default local
+no aaa root
+
+username admin privilege 15 role network-admin secret sha512 {{ admin_pw_hash }}
+username flowctl role network-admin secret sha512 {{ flowctl_pw_hash }}
+username monitoring role network-admin secret sha512 {{ monitoring_pw_hash }}
+
+{# Configure SNMP #}
+snmp-server chassis-id {{ inventory_hostname_short }}
+snmp-server view all-items 1.3 included
+snmp-server group read-only v3 priv read all-items
+
+{# Enable the API #}
+management api http-commands
+  protocol http
+  no shutdown
+
+{# Configure the prompt and some handy aliases #} 
+prompt %h%P 
+alias senz show interface counter error | nz 
+alias shmc show int | awk '/^[A-Z]/ { intf = $1 } /, address is/ { print intf, $6 }' 
+alias snz show interface counter | nz 
+alias spd show port-channel %1 detail all 
+alias sqnz show interface counter queue | nz 
+alias srnz show interface counter rate | nz 
+
+{#################################} 
+{# Configure the tap aggregation #} 
+{#################################} 
+
+{# Configure TapAgg and disable some switch functionality, per: #} 
+{# https://eos.arista.com/danz-tap-aggregation-basic-settings-before-you-start/#IGMP_Snooping #} 
+tap aggregation 
+  mode exclusive 
+no ip igmp snooping 
+no ip routing 
+spanning-tree mode none 
+
+{# Have more conservative settings for errdisable #} 
+no errdisable detect cause link-flap 
+errdisable recovery cause link-flap 
+errdisable flap-setting cause link-flap max-flaps 10 time 10 
+
+{# Configure LANZ #} 
+queue-monitor length 
+queue-monitor length log 10 
+
+{# Configure load-balance profile #} 
+{% if platform == "fm6000" %} 
+load-balance policies 
+  load-balance fm6000 profile 5tuple 
+    no fields mac 
+    fields ip protocol dst-ip dst-port src-ip src-port 
+    distribution symmetric-hash mac-ip 
+{% endif %} 
+    
+{############################} 
+{# Configure the interfaces #} 
+{############################} 
+
+{# Configure management interface #} 
+interface Management1 
+  ip address {{ network.ip }}/{{ network.cidr }} 
+
+ip route 0.0.0.0/0 {{ network.gw }} name default-gw 
+
+{% for interface in interfaces %} 
+interface {{ interface.name }} 
+  description {{ interface.desc }} 
+  {% if interface.tool_group is defined %} 
+  {# This is a tool port #} 
+  switchport mode tool 
+  switchport tool group set {{ interface.tool_group }} 
+  {% elif interface.tap_group is defined %} 
+  {# This is a tap port #} 
+  ingress load-balance profile 5tuple 
+  no lldp transmit 
+  switchport mode tap 
+  switchport tap default group {{ interface.tap_group }} 
+  {% elif interface.channel_group is defined %} 
+  {# This is a member of a port channel #} 
+  channel-group {{ interface.channel_group }} mode on 
+  no lldp transmit  
+  {% endif %} 
+{% endfor %} 
+
+{# end #}

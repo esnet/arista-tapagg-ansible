@@ -1,0 +1,17 @@
+---
+# make ansible play nice in a virtualenv
+ansible_python_interpreter: python
+
+pw_prefix: "Shared-security-operations/{{ inventory_hostname_short }}"
+
+provider:
+  host: "{{ inventory_hostname }}"
+  username: admin
+  password: "{{ lookup('lastpass', pw_prefix + '_admin_password') }}"
+  transport: cli
+
+admin_pw_hash: "{{ lookup('lastpass', pw_prefix + '_admin_hash') }}"
+flowctl_pw_hash: "{{ lookup('lastpass', pw_prefix + '_flowctl_hash') }}"
+monitoring_pw_hash: "{{ lookup('lastpass', pw_prefix + '_monitoring_hash') }}"
+  
+timezone: CST6CDT

@@ -1,0 +1,17 @@
+---
+platform: fm6000
+network: {ip: 10.142.148.31, cidr: 24, gw: 10.142.148.1}
+interfaces:
+  # These ports come from the production Arista
+  - {name: Ethernet1, desc: "arista-tapagg-01 Eth3/27", tap_group: Arista_Mirror}
+  - {name: Ethernet2, desc: "arista-tapagg-01 Eth3/28", tap_group: Arista_Mirror}
+  - {name: Ethernet3, desc: "arista-tapagg-01 Eth3/29", tap_group: Arista_Mirror}
+  - {name: Ethernet4, desc: "arista-tapagg-01 Eth3/30", tap_group: Arista_Mirror}
+  # Port Channel 1 load-balances across the Bro test cluster
+  - {name: Port-Channel1, desc: "nids-test", tool_group: Arista_Mirror}
+  # These are the port channel members that Bro test is plugged into
+  - {name: Ethernet29, desc: "bro-nids-test1-1", channel_group: 1}
+  - {name: Ethernet30, desc: "bro-nids-test1-2", channel_group: 1}
+  - {name: Ethernet31, desc: "bro-nids-test2-1", channel_group: 1}
+  - {name: Ethernet32, desc: "bro-nids-test2-2", channel_group: 1}
+

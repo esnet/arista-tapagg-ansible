@@ -1,0 +1,6 @@
+---
+- name: Install configuration template
+  eos_config:
+    backup: yes
+    src: config.jinja
+    provider: "{{ provider }}"

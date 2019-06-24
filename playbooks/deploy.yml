@@ -3,5 +3,5 @@
   gather_facts: no
   connection: local
   roles:
-    - { role: 'arista-tapagg-ansible' }
+    - { role: 'arista-tapagg' }
 
